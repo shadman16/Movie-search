@@ -1,0 +1,56 @@
+import requests_with_caching
+import json
+def get_movies_from_tastedive(st):    
+    param={"q":st,"type":"movies","limit":5}
+    simi=requests_with_caching.get("https://tastedive.com/api/similar",params=param)
+    st=simi.json()    
+    return st
+def extract_movie_titles(d):
+    lst=[]
+    for d1 in d['Similar']['Results']:
+        lst.append(d1["Name"])
+    return lst   
+def get_related_titles(lst):
+    lst1=[]
+    for d in lst:
+        lst1=lst1+extract_movie_titles(get_movies_from_tastedive(d))   
+    lst2=list(set(lst1))
+    
+    return lst2
+def get_movie_data(st):
+    par={"t":st,"r":'json'}
+    s=requests_with_caching.get("http://www.omdbapi.com/",params=par)
+    st=s.json()
+    return st
+def get_movie_rating(d):
+    rating=0
+    for item in d["Ratings"]:
+        if item["Source"]=="Rotten Tomatoes":
+            rating=int(item["Value"].strip("%"))   
+    return rating
+def get_sorted_recommendations(d):
+    dic={}
+    for item in d:
+        print(item)
+        lst_rel=extract_movie_titles(get_movies_from_tastedive(item))
+        print(lst_rel)
+        dic[item]=",".join(lst_rel)
+    movies=dic.keys()
+    print(movies)
+    lst=[]
+    lst1=[]
+   
+    for movie in movies:
+        temp_lst=dic[movie].split(",")
+        lst=lst+temp_lst
+        print(temp_lst)
+        for item in temp_lst:
+            lst1.append((get_movie_rating(get_movie_data(item)))) 
+           
+    ls3=list(zip(lst,lst1))
+    ls3=sorted(ls3,reverse=True,key=lambda x:(x[1],x[0]))
+    result=[x[0] for x in ls3]
+    return result
+                    
+                             
+                 
